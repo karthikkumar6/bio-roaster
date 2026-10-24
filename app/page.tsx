@@ -61,7 +61,10 @@ export default function Home() {
   function handleBioChange(value: string) {
     const bounded = Array.from(value).slice(0, MAX_BIO_LENGTH).join("");
     setBio(bounded);
-    if (roast) setRoast("");
+    setRoast("");
+    setCopied(false);
+    setCopyError("");
+    roastNumber.current = 0;
   }
 
   async function copyRoast() {
