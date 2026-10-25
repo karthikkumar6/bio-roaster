@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useRef, useState } from "react";
-import { generateLocalRoast } from "@/lib/roast";
 import { MAX_BIO_LENGTH } from "@/lib/validation";
+
+type Provider = "openai" | "claude";
 
 function FlameIcon({ className = "" }: { className?: string }) {
   return (
@@ -29,10 +30,11 @@ export default function Home() {
   const [bio, setBio] = useState("");
   const [roast, setRoast] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [provider, setProvider] = useState<Provider>("openai");
+  const [apiError, setApiError] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
-  const roastNumber = useRef(0);
   const charCount = Array.from(bio).length;
   const canRoast = bio.trim().length > 0 && charCount <= MAX_BIO_LENGTH && !isLoading;
 
@@ -41,14 +43,30 @@ export default function Home() {
     if (!canRoast) return;
 
     setIsLoading(true);
+    setApiError("");
     setCopyError("");
     setCopied(false);
     setRoast("");
 
-    // Keep the brief loading animation while the local roaster picks a punchline.
-    await new Promise((resolve) => window.setTimeout(resolve, 220));
-    setRoast(generateLocalRoast(bio, roastNumber.current++));
-    setIsLoading(false);
+    try {
+      const response = await fetch("/api/roast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio, provider }),
+      });
+      const result = await response.json() as { roast?: unknown; error?: unknown };
+      if (!response.ok) {
+        throw new Error(typeof result.error === "string" ? result.error : "The roast could not be generated. Please try again.");
+      }
+      if (typeof result.roast !== "string" || !result.roast.trim()) {
+        throw new Error("The AI returned an empty roast. Please try again.");
+      }
+      setRoast(result.roast.trim());
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "The roast could not be generated. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -64,7 +82,15 @@ export default function Home() {
     setRoast("");
     setCopied(false);
     setCopyError("");
-    roastNumber.current = 0;
+    setApiError("");
+  }
+
+  function handleProviderChange(value: Provider) {
+    setProvider(value);
+    setRoast("");
+    setApiError("");
+    setCopied(false);
+    setCopyError("");
   }
 
   async function copyRoast() {
@@ -95,7 +121,7 @@ export default function Home() {
         <div className="hero-copy text-center">
           <div className="eyebrow"><span className="eyebrow-line" /> YOUR BIO, UNDER FIRE <span className="eyebrow-line" /></div>
           <h1>Let’s roast your<br className="sm:hidden" /> <span className="headline-accent">Instagram bio.</span></h1>
-          <p>Paste your bio. Get absolutely cooked. No API key required.</p>
+          <p>Paste your bio. Get absolutely cooked with OpenAI or Claude.</p>
         </div>
 
         <div className="workbench mt-10 grid gap-5 lg:grid-cols-[1fr_0.92fr] lg:gap-6">
@@ -108,7 +134,21 @@ export default function Home() {
                   <h2 id="bio-label">Your bio</h2>
                 </div>
               </div>
-              <span className="max-chip">MAX {MAX_BIO_LENGTH}</span>
+              <div className="input-options">
+                <label className="provider-picker" htmlFor="roast-provider">
+                  <span>ROAST WITH</span>
+                  <select
+                    id="roast-provider"
+                    value={provider}
+                    onChange={(event) => handleProviderChange(event.target.value as Provider)}
+                    disabled={isLoading}
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="claude">Claude</option>
+                  </select>
+                </label>
+                <span className="max-chip">MAX {MAX_BIO_LENGTH}</span>
+              </div>
             </div>
 
             <form ref={formRef} onSubmit={submitRoast} className="roast-form">
@@ -134,15 +174,18 @@ export default function Home() {
                 </span>
               </div>
 
+              {apiError && <p className="error-message" role="alert">{apiError}</p>}
+
               <button className="roast-button" type="submit" disabled={!canRoast}>
                 {isLoading ? (
-                  <><span className="button-spinner" aria-hidden="true" /> ROASTING IN PROGRESS</>
+                  <><span className="button-spinner" aria-hidden="true" /> ASKING {provider === "openai" ? "OPENAI" : "CLAUDE"}</>
                 ) : (
                   <>Roast My Bio <FlameIcon className="h-[19px] w-[19px]" /></>
                 )}
                 {!isLoading && <span className="button-arrow" aria-hidden="true">↗</span>}
               </button>
               <div className="form-footnote"><span className="keyboard-key">↵</span> press enter to roast <span className="footnote-separator">·</span> shift + enter for a new line</div>
+              <p className="privacy-note">Your bio is sent to the selected AI provider for this roast. Bio Roaster does not save it.</p>
             </form>
           </section>
 
@@ -201,7 +244,7 @@ export default function Home() {
 
         <footer className="page-footer mx-auto flex max-w-6xl items-center justify-between">
           <span>MADE FOR THE MAIN CHARACTER IN YOU</span>
-          <span className="footer-right"><span className="footer-flame"><FlameIcon className="h-3.5 w-3.5" /></span> LOCAL ROASTS · ZERO BIOS STORED</span>
+          <span className="footer-right"><span className="footer-flame"><FlameIcon className="h-3.5 w-3.5" /></span> AI ROASTS · NOT SAVED BY THIS APP</span>
         </footer>
       </section>
     </main>

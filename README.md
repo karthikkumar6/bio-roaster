@@ -1,16 +1,14 @@
 # Bio Roaster 🔥
 
-Bio Roaster turns an Instagram bio into a playful roast. It runs entirely in your browser using local rules and punchline templates—**no API key, account, backend, or paid service required**.
+Bio Roaster turns an Instagram bio into a playful, personal roast using OpenAI or Claude. Pick a provider, paste a bio, and get a short roast that responds to its details.
 
 ## Features
 
-- Roasts common bio themes like dance, travel, coffee, fitness, creator titles, and overused phrases.
-- Generates a fresh variation when you choose **Roast again**.
-- Keeps your bio in the browser; it is not sent to a roast API or saved by this app.
-- Responsive interface, character counter, keyboard submit, and copy button.
+- OpenAI and Claude provider choices.
+- Short roasts written in simple language and grounded in the bio's actual phrases.
+- “Roast again” requests a fresh model response.
+- 500-character input limit and a small per-IP request limit.
 - Open source under the MIT License.
-
-> The roast generator is rule-based, not an AI model. It uses a small collection of local patterns and templates, so its jokes are quick and predictable—and it never needs API tokens.
 
 ## Run locally
 
@@ -18,6 +16,7 @@ Bio Roaster turns an Instagram bio into a playful roast. It runs entirely in you
 
 - Node.js 22 or newer
 - npm
+- An API key for OpenAI or Anthropic Claude
 
 ### Setup
 
@@ -25,34 +24,52 @@ Bio Roaster turns an Instagram bio into a playful roast. It runs entirely in you
 git clone https://github.com/karthikkumar6/bio-roaster.git
 cd bio-roaster
 npm install
+cp .env.example .env.local
+```
+
+Add **one** provider key to `.env.local`:
+
+```dotenv
+OPENAI_API_KEY=your_openai_key
+```
+
+Or use Claude:
+
+```dotenv
+ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+Keep `.env.local` private. Never commit it or put a provider key in a `NEXT_PUBLIC_` variable. API requests are sent from the server, so the key is not included in browser code.
+
+Run the app:
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). There is no `.env.local` setup and no secret to configure.
+Open [http://localhost:3000](http://localhost:3000), and select the provider whose key you configured.
 
-## Production build
+## Deploy to Vercel
 
-```bash
-npm run build
-npm run start
-```
+Import the repository into Vercel, then add either `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` under **Project Settings → Environment Variables**. Add it for Production (and Preview if wanted), save, and redeploy. Do not use the `NEXT_PUBLIC_` prefix. The page can be deployed without a key, but roasts will show a setup message until one is added.
 
-To deploy, import the repository into Vercel or another Next.js host. No environment variables are needed.
-
-## Tech stack
-
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
+The deployed app uses the configured provider's API balance. Set a usage limit in the provider dashboard before sharing the public link. The built-in per-IP limit is best-effort and is not a substitute for provider billing controls.
 
 ## Privacy
 
-Roasts are generated in the browser. The app has no roast API route, analytics, database, or third-party AI service. Your bio stays in the current page session and disappears when you leave or refresh.
+The selected provider receives the bio to create the roast. Bio Roaster does not save submitted bios in a database or log the text. The AI provider handles the request under its own terms and data policies. Do not paste a bio containing information you do not want to send to that provider.
+
+## Tech stack
+
+- Next.js App Router and route handlers
+- React
+- TypeScript
+- Tailwind CSS
+- OpenAI Responses API and Anthropic Messages API
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the small contribution guide. Pull requests that improve the local roast patterns, accessibility, or mobile experience are welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Contributions that improve roast quality, accessibility, or mobile experience are welcome.
 
 ## License
 
